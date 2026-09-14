@@ -1,4 +1,4 @@
-let apiKey = "a3te025ob303fbf3720b84aa127ffc8b";
+let apiKey = "a3te02ob303fbf3720b84aa127ffc8b";
 
 const searchForm = document.querySelector("#search-form");
 const searchInput = document.querySelector("#search-input");
@@ -17,113 +17,51 @@ const loadingElement = document.querySelector("#loading");
 const errorElement = document.querySelector("#error-message");
 
 
-const weatherIcons = {
+function getWeatherInfo(code) {
 
-    0: {
-        description: "Clear Sky",
-        day: "https://shecodes-assets.s3.amazonaws.com/api/weather/icons/clear-sky-day.png"
-    },
+    const weather = {
 
-    1: {
-        description: "Mainly Clear",
-        day: "https://shecodes-assets.s3.amazonaws.com/api/weather/icons/clear-sky-day.png"
-    },
+        0: ["Clear Sky", "☀️"],
+        1: ["Mainly Clear", "🌤️"],
+        2: ["Partly Cloudy", "⛅"],
+        3: ["Overcast", "☁️"],
 
-    2: {
-        description: "Partly Cloudy",
-        day: "https://shecodes-assets.s3.amazonaws.com/api/weather/icons/partly-cloudy-day.png"
-    },
+        45: ["Foggy", "🌫️"],
+        48: ["Foggy", "🌫️"],
 
-    3: {
-        description: "Overcast",
-        day: "https://shecodes-assets.s3.amazonaws.com/api/weather/icons/overcast.png"
-    },
+        51: ["Light Drizzle", "🌦️"],
+        53: ["Drizzle", "🌦️"],
+        55: ["Heavy Drizzle", "🌧️"],
 
-    45: {
-        description: "Foggy",
-        day: "https://shecodes-assets.s3.amazonaws.com/api/weather/icons/overcast.png"
-    },
+        61: ["Light Rain", "🌦️"],
+        63: ["Rain", "🌧️"],
+        65: ["Heavy Rain", "🌧️"],
 
-    48: {
-        description: "Foggy",
-        day: "https://shecodes-assets.s3.amazonaws.com/api/weather/icons/overcast.png"
-    },
+        71: ["Light Snow", "🌨️"],
+        73: ["Snow", "❄️"],
+        75: ["Heavy Snow", "❄️"],
 
-    51: {
-        description: "Light Drizzle",
-        day: "https://shecodes-assets.s3.amazonaws.com/api/weather/icons/rain.png"
-    },
+        80: ["Rain Showers", "🌦️"],
+        81: ["Rain Showers", "🌧️"],
+        82: ["Heavy Rain Showers", "🌧️"],
 
-    53: {
-        description: "Drizzle",
-        day: "https://shecodes-assets.s3.amazonaws.com/api/weather/icons/rain.png"
-    },
+        95: ["Thunderstorm", "⛈️"],
+        96: ["Thunderstorm", "⛈️"],
+        99: ["Thunderstorm", "⛈️"]
 
-    55: {
-        description: "Heavy Drizzle",
-        day: "https://shecodes-assets.s3.amazonaws.com/api/weather/icons/rain.png"
-    },
+    };
 
-    61: {
-        description: "Light Rain",
-        day: "https://shecodes-assets.s3.amazonaws.com/api/weather/icons/rain.png"
-    },
-
-    63: {
-        description: "Rain",
-        day: "https://shecodes-assets.s3.amazonaws.com/api/weather/icons/rain.png"
-    },
-
-    65: {
-        description: "Heavy Rain",
-        day: "https://shecodes-assets.s3.amazonaws.com/api/weather/icons/rain.png"
-    },
-
-    71: {
-        description: "Light Snow",
-        day: "https://shecodes-assets.s3.amazonaws.com/api/weather/icons/snow.png"
-    },
-
-    73: {
-        description: "Snow",
-        day: "https://shecodes-assets.s3.amazonaws.com/api/weather/icons/snow.png"
-    },
-
-    75: {
-        description: "Heavy Snow",
-        day: "https://shecodes-assets.s3.amazonaws.com/api/weather/icons/snow.png"
-    },
-
-    80: {
-        description: "Rain Showers",
-        day: "https://shecodes-assets.s3.amazonaws.com/api/weather/icons/rain.png"
-    },
-
-    81: {
-        description: "Rain Showers",
-        day: "https://shecodes-assets.s3.amazonaws.com/api/weather/icons/rain.png"
-    },
-
-    82: {
-        description: "Heavy Rain Showers",
-        day: "https://shecodes-assets.s3.amazonaws.com/api/weather/icons/rain.png"
-    },
-
-    95: {
-        description: "Thunderstorm",
-        day: "https://shecodes-assets.s3.amazonaws.com/api/weather/icons/storm.png"
-    }
-
-};
+    return weather[code] || ["Unknown", "🌤️"];
+}
 
 
-searchForm.addEventListener("submit", function (event) {
+searchForm.addEventListener("submit", function(event) {
 
     event.preventDefault();
 
     const city = searchInput.value.trim();
 
-    if (!city) {
+    if (city === "") {
         return;
     }
 
@@ -139,74 +77,68 @@ async function searchCity(city) {
 
     try {
 
-        const locationResponse = await axios.get(
-            "https://geocoding-api.open-meteo.com/v1/search",
-            {
-                params: {
-                    name: city,
-                    count: 1,
-                    language: "en",
-                    format: "json"
-                }
-            }
+        const locationResponse = await fetch(
+            `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=en&format=json`
         );
 
+        if (!locationResponse.ok) {
+            throw new Error("Could not find location");
+        }
+
+        const locationData = await locationResponse.json();
 
         if (
-            !locationResponse.data.results ||
-            locationResponse.data.results.length === 0
+            !locationData.results ||
+            locationData.results.length === 0
         ) {
 
             throw new Error("City not found");
 
         }
 
+        const location = locationData.results[0];
 
-        const location = locationResponse.data.results[0];
+        const weatherURL =
+            `https://api.open-meteo.com/v1/forecast` +
+            `?latitude=${location.latitude}` +
+            `&longitude=${location.longitude}` +
+            `&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code` +
+            `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max` +
+            `&timezone=auto` +
+            `&forecast_days=7`;
 
 
-        // Get weather
-        const weatherResponse = await axios.get(
-            "https://api.open-meteo.com/v1/forecast",
-            {
-                params: {
+        const weatherResponse =
+            await fetch(weatherURL);
 
-                    latitude: location.latitude,
 
-                    longitude: location.longitude,
+        if (!weatherResponse.ok) {
+            throw new Error("Weather information unavailable");
+        }
 
-                    current:
-                        "temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code",
 
-                    daily:
-                        "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max",
+        const weatherData =
+            await weatherResponse.json();
 
-                    timezone: "auto",
 
-                    forecast_days: 7
-
-                }
-            }
-        );
-
+        console.log("Weather data:", weatherData);
 
         updateCurrentWeather(
             location,
-            weatherResponse.data
+            weatherData
         );
 
-
         updateForecast(
-            weatherResponse.data
+            weatherData
         );
 
 
     } catch (error) {
 
-        console.error(error);
+        console.error("Weather error:", error);
 
         showError(
-            "Sorry, we couldn't find that city. Please try another city."
+            "We couldn't find that city. Please try another city."
         );
 
     } finally {
@@ -218,96 +150,120 @@ async function searchCity(city) {
 }
 
 
-function updateCurrentWeather(location, weatherData) {
+function updateCurrentWeather(
+    location,
+    weatherData
+) {
 
-    const current = weatherData.current;
+    const current =
+        weatherData.current;
 
-    cityElement.innerHTML = location.name;
+
+    cityElement.textContent =
+        location.name;
 
 
-    if (location.country) {
+    if (location.country_code) {
 
-        cityElement.innerHTML =
-            `${location.name}, ${location.country_code || ""}`;
+        cityElement.textContent =
+            `${location.name}, ${location.country_code}`;
 
     }
 
 
-    const date = new Date(
-        current.time
-    );
+    const date =
+        new Date(current.time);
 
-    dateTimeElement.innerHTML =
+
+    dateTimeElement.textContent =
         formatDate(date);
 
 
     const weather =
-        weatherIcons[current.weather_code]
-        || weatherIcons[0];
+        getWeatherInfo(
+            current.weather_code
+        );
 
 
-    descriptionElement.innerHTML =
-        weather.description;
+    descriptionElement.textContent =
+        weather[0];
 
 
-    temperatureElement.innerHTML =
-        Math.round(current.temperature_2m);
+    temperatureElement.textContent =
+        Math.round(
+            current.temperature_2m
+        );
 
 
-    humidityElement.innerHTML =
-        Math.round(current.relative_humidity_2m);
+    humidityElement.textContent =
+        Math.round(
+            current.relative_humidity_2m
+        );
 
 
-    windElement.innerHTML =
-        Math.round(current.wind_speed_10m * 10) / 10;
+    windElement.textContent =
+        Math.round(
+            current.wind_speed_10m * 10
+        ) / 10;
 
-
-    iconElement.src =
-        weather.day;
+    iconElement.src = "";
 
     iconElement.alt =
-        weather.description;
+        weather[0];
+
+    iconElement.style.display =
+        "none";
 
 }
 
 
 function updateForecast(weatherData) {
 
-    const daily = weatherData.daily;
+    const daily =
+        weatherData.daily;
+
 
     forecastElement.innerHTML = "";
 
 
-    daily.time.forEach(function (date, index) {
+    console.log(
+        "Forecast days:",
+        daily.time
+    );
 
-        const forecastDate =
-            new Date(date + "T12:00:00");
 
+    for (
+        let i = 0;
+        i < daily.time.length;
+        i++
+    ) {
 
-        const weatherCode =
-            daily.weather_code[index];
+        const date =
+            new Date(
+                daily.time[i] + "T12:00:00"
+            );
 
 
         const weather =
-            weatherIcons[weatherCode]
-            || weatherIcons[0];
-
-
-        const maxTemperature =
-            Math.round(
-                daily.temperature_2m_max[index]
+            getWeatherInfo(
+                daily.weather_code[i]
             );
 
 
-        const minTemperature =
+        const high =
             Math.round(
-                daily.temperature_2m_min[index]
+                daily.temperature_2m_max[i]
             );
 
 
-        const rainProbability =
-            daily.precipitation_probability_max[index];
+        const low =
+            Math.round(
+                daily.temperature_2m_min[i]
+            );
 
+
+        const rain =
+            daily.precipitation_probability_max[i] || 0;
 
         const card =
             document.createElement("div");
@@ -317,46 +273,38 @@ function updateForecast(weatherData) {
             "forecast-card";
 
 
-        card.style.animationDelay =
-            `${index * 0.08}s`;
-
-
         card.innerHTML = `
 
             <div class="forecast-day">
-                ${getDayName(forecastDate)}
+                ${getDayName(date)}
             </div>
 
             <div class="forecast-date">
-                ${formatShortDate(forecastDate)}
+                ${formatShortDate(date)}
             </div>
 
-            <img
-                class="forecast-icon"
-                src="${weather.day}"
-                alt="${weather.description}"
-            >
+            <div class="forecast-emoji">
+                ${weather[1]}
+            </div>
 
             <div class="forecast-description">
-                ${weather.description}
+                ${weather[0]}
             </div>
 
             <div class="forecast-temperatures">
 
                 <span class="forecast-high">
-                    ${maxTemperature}°
+                    ${high}°
                 </span>
 
-                /
-
                 <span class="forecast-low">
-                    ${minTemperature}°
+                    ${low}°
                 </span>
 
             </div>
 
             <div class="rain">
-                💧 ${rainProbability || 0}% rain
+                💧 ${rain}% rain
             </div>
 
         `;
@@ -364,64 +312,19 @@ function updateForecast(weatherData) {
 
         forecastElement.appendChild(card);
 
-    });
-
-}
-
-
-function formatDate(date) {
-
-    const days = [
-        "Sunday",
-        "Monday",
-        "Tuesday",
-        "Wednesday",
-        "Thursday",
-        "Friday",
-        "Saturday"
-    ];
-
-
-    let hours =
-        date.getHours();
-
-
-    let minutes =
-        date.getMinutes();
-
-
-    if (minutes < 10) {
-
-        minutes =
-            `0${minutes}`;
-
     }
-
-
-    return `
-        ${days[date.getDay()]}
-        ${hours}:${minutes}
-    `;
 
 }
 
 
 function getDayName(date) {
 
-    const days = [
-        "Sunday",
-        "Monday",
-        "Tuesday",
-        "Wednesday",
-        "Thursday",
-        "Friday",
-        "Saturday"
-    ];
-
-
-    return days[
-        date.getDay()
-    ];
+    return date.toLocaleDateString(
+        "en-ZA",
+        {
+            weekday: "short"
+        }
+    );
 
 }
 
@@ -437,6 +340,21 @@ function formatShortDate(date) {
     );
 
 }
+
+
+function formatDate(date) {
+
+    return date.toLocaleDateString(
+        "en-ZA",
+        {
+            weekday: "long",
+            hour: "2-digit",
+            minute: "2-digit"
+        }
+    );
+
+}
+
 
 
 function showLoading() {
@@ -455,9 +373,10 @@ function hideLoading() {
 }
 
 
+
 function showError(message) {
 
-    errorElement.innerHTML =
+    errorElement.textContent =
         message;
 
 }
@@ -465,10 +384,11 @@ function showError(message) {
 
 function clearError() {
 
-    errorElement.innerHTML =
+    errorElement.textContent =
         "";
 
 }
+
 
 
 searchCity("Cape Town");
